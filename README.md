@@ -1,142 +1,145 @@
 # AI-Powered Smart Learning & Productivity Assistant
 
-A full-stack AI app that turns any text or PDF into summaries, key concepts, quiz questions, and a personalized daily study plan — all in one clean, modern interface.
-
----
+A full-stack AI app that turns text or PDF content into summaries, key concepts, quiz questions, and a personalized study plan using a local Ollama model.
 
 ## Stack
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | React 19 + Vite + Tailwind CSS v4 |
+| Frontend | React 19 + Vite |
 | Backend | Node.js 20 + Express 5 |
-| AI | Ollama (local model, no paid API required) |
-| PDF Parsing | `pdf-parse` |
-| Dev runner | `concurrently` |
+| AI | Ollama |
+| Validation | Zod |
+| PDF Parsing | pdf-parse |
+| Dev runner | concurrently |
 
----
+## Project Structure
 
-## Folder Structure
-
-```
-ai-smart-learning/
-├── client/                 ← React frontend
+```text
+Aı-Powered/
+├── client/
 │   ├── src/
-│   │   ├── api/            ← Axios API helpers
-│   │   ├── components/     ← All UI components
-│   │   ├── hooks/          ← Custom React hooks
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
 │   │   ├── App.jsx
 │   │   └── main.jsx
-│   └── vite.config.js      ← Proxy → Express :5000
-├── server/                 ← Express backend
+│   └── vite.config.js
+├── server/
 │   ├── src/
-│   │   ├── routes/         ← /api/analyze, /api/plan, /api/history
-│   │   └── middleware/     ← Upload + error handlers
+│   │   ├── middleware/
+│   │   ├── routes/
+│   │   └── utils/
+│   ├── .env.example
 │   └── index.js
-└── package.json            ← Root scripts (concurrently)
+├── package.json
+└── README.md
 ```
-
----
 
 ## Quick Start
 
-### 1. Clone & install
+### 1. Install dependencies
+
 ```bash
-git clone <repo-url> ai-smart-learning
-cd ai-smart-learning
-npm install          # installs root devDeps (concurrently)
-npm run install:all  # installs client + server deps
+npm install
+npm run install:all
 ```
 
-### 2. Install and run Ollama (one-time)
+### 2. Install Ollama and pull a model
+
+Install Ollama from https://ollama.com/download, then pull the recommended model:
+
 ```bash
-# Install from https://ollama.com/download
-ollama pull qwen2.5:7b
+ollama pull qwen2.5:1.5b
 ```
 
-### 3. Configure environment
+`qwen2.5:1.5b` is the recommended default for lower-end machines because it responds much faster than `qwen2.5:7b`.
+
+### 3. Create the server environment file
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item server/.env.example server/.env
+```
+
+On macOS or Linux:
+
 ```bash
 cp server/.env.example server/.env
-# Optional: change OLLAMA_MODEL if you pulled a different model
 ```
 
-### 4. Run in development
+### 4. Start the app
+
 ```bash
 npm run dev
-# Client → http://localhost:5173
-# Server → http://localhost:5000
 ```
 
----
+Expected local URLs:
+
+- Client: `http://localhost:5173`
+- Server: `http://localhost:5000`
+
+If port `5173` is busy, Vite may choose `5174`, `5175`, or another nearby port.
 
 ## Features
 
-- **Text Input** — paste any text directly
-- **PDF Upload** — drag-and-drop or click to upload a PDF
-- **AI Summary** — concise 3–5 sentence overview
-- **Key Concepts** — bullet list of core ideas
-- **Quiz Questions** — 5 multiple-choice questions with answers
-- **Study Plan** — personalized daily schedule
-- **History** — saved sessions stored in localStorage
+- Analyze pasted text
+- Upload and analyze PDF files
+- Generate a short summary
+- Extract key concepts
+- Generate quiz questions
+- Create a multi-day study plan
+- Keep recent results in the frontend session history
 
----
+## Environment Variables
 
-## Environment Variables (`server/.env`)
+The backend reads `server/.env` using an absolute path, so it works even when the process is started from a different working directory.
 
 | Variable | Description |
 |----------|-------------|
-| `OLLAMA_BASE_URL` | Ollama API URL (default: `http://127.0.0.1:11434`) |
-| `OLLAMA_MODEL` | Local model name (example: `qwen2.5:7b`) |
-| `OLLAMA_TIMEOUT_MS` | Request timeout for Ollama calls in milliseconds (default: `600000`) |
-| `OLLAMA_NUM_PREDICT` | Max generated tokens per request (default: `650`) |
-| `OLLAMA_NUM_CTX` | Context window size sent to Ollama (default: `2048`) |
-| `OLLAMA_KEEP_ALIVE` | Keep model loaded in memory between requests (default: `30m`) |
-| `PORT` | Server port (default: 5000) |
-| `MAX_FILE_SIZE_MB` | Max PDF upload size in MB (default: 10) |
-
----
+| `OLLAMA_BASE_URL` | Ollama API URL, usually `http://127.0.0.1:11434` |
+| `OLLAMA_MODEL` | Installed local model name, recommended: `qwen2.5:1.5b` |
+| `OLLAMA_TIMEOUT_MS` | Timeout for Ollama requests |
+| `OLLAMA_NUM_PREDICT` | Maximum generated tokens |
+| `OLLAMA_NUM_CTX` | Context window passed to Ollama |
+| `OLLAMA_KEEP_ALIVE` | Keeps the model warm between requests |
+| `PORT` | Express server port |
+| `MAX_FILE_SIZE_MB` | Maximum PDF upload size |
 
 ## API Endpoints
 
 | Method | Path | Description |
 |--------|------|-------------|
-| POST | `/api/analyze` | Analyze text — returns summary, concepts, quiz |
-| POST | `/api/plan` | Generate personalized study plan |
-| GET | `/api/history` | (Optional) Retrieve history from server |
+| GET | `/` | API info and available endpoints |
+| GET | `/api/health` | Health check |
+| POST | `/api/analyze` | Analyze text and return summary, concepts, and quiz |
+| POST | `/api/analyze/pdf` | Analyze uploaded PDF content |
+| POST | `/api/plan` | Generate a study plan |
 
----
+## Current Behavior Notes
 
-## Advanced Ideas (Bonus)
-- Add user authentication (JWT)
-- Swap localStorage for MongoDB
-- Add speech-to-text input
-- Export study plan as PDF
-- Add a progress tracker / streak counter
-
----
+- Analysis results appear before the study plan is finished generating.
+- Planning runs as a separate phase in the UI.
+- Smaller Ollama models may return fewer quiz items or concepts than requested, and the backend now accepts partial valid results instead of failing the whole request.
 
 ## Troubleshooting
 
-### Ollama request failed (404): model not found
+### Model not found
 
-1. Verify Ollama is installed and available in terminal:
-```bash
-ollama --version
-```
-
-2. List installed models:
 ```bash
 ollama list
+ollama pull qwen2.5:1.5b
 ```
 
-3. Pull the configured model (default):
-```bash
-ollama pull qwen2.5:7b
-```
+If you change the model name in `server/.env`, restart the backend.
 
-4. If you want to use a different model, update `server/.env`:
-```env
-OLLAMA_MODEL=<your-installed-model>
-```
+### Backend works but the browser shows `Cannot GET /`
 
-5. Restart the backend server after changing `.env`.
+Open the frontend URL, not the backend root URL. The backend root returns API metadata as JSON, while the React app runs through Vite on port `5173` or another Vite port.
+
+### Requests are too slow
+
+- Prefer `qwen2.5:1.5b` over `qwen2.5:7b` on CPU-only machines.
+- Keep `OLLAMA_TIMEOUT_MS` high enough for your hardware.
+- Close other heavy apps if Ollama responses are taking several minutes.
